@@ -183,4 +183,4 @@ app.get('/api/export/students.csv',auth(['admin','teacher']),async(req,res)=>{
 });
 
 app.use((err,req,res,next)=>{console.error(err);res.status(500).json({error:'Internal server error'});});
-init().then(()=>app.listen(PORT,'0.0.0.0',()=>console.log('Bashasha backend listening on '+PORT))).catch(e=>{console.error(e);process.exit(1)});
+app.listen(PORT,'0.0.0.0',()=>{console.log('Bashasha backend listening on '+PORT); retryDb().catch(()=>{});});
