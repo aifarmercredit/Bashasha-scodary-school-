@@ -1,4 +1,4 @@
-const API_BASE = 'https://bashasha-scodary-school-production.up.railway.app/api';
+const API_BASE = 'https://bashasha-school-api.onrender.com/api';
 const KEY='bss_data_v1';
 const seed={applications:[],students:[],subjects:[],marks:[]};
 function data(){try{return JSON.parse(localStorage.getItem(KEY)||JSON.stringify(seed))}catch{return seed}}
