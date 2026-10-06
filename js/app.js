@@ -1,4 +1,4 @@
-const API_BASE='https://bashasha-school-api.onrender.com/api';
+const API_BASE = '/api';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function apiFetch(path,options={}){const token=sessionStorage.getItem('bss_token');const headers={...(options.body instanceof FormData?{}:{'Content-Type':'application/json'}),...(options.headers||{})};if(token)headers.Authorization='Bearer '+token;const r=await fetch(API_BASE+path,{...options,headers});const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||j.message||'Request failed');return j}
