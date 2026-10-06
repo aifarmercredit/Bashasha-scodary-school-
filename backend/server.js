@@ -25,19 +25,36 @@ app.use(express.json({limit:'12mb'}));
 app.use(rateLimit({windowMs:15*60*1000,max:300,standardHeaders:true,legacyHeaders:false}));
 
 const schema=fs.readFileSync(path.join(__dirname,'schema.sql'),'utf8');
+let dbReady=false;
+let dbInitError=null;
+let dbReadyPromise;
+
 async function init(){
  if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
+ await pool.query('select 1');
  await pool.query(schema);
  if(ADMIN_PASSWORD){
    const hash=await bcrypt.hash(ADMIN_PASSWORD,12);
    await pool.query(`insert into users(email,password_hash,role,display_name) values($1,$2,'admin','Bashasha Secondary School Administrator')
      on conflict(email) do update set role='admin',display_name='Bashasha Secondary School Administrator',password_hash=$2`,[ADMIN_EMAIL,hash]);
  }
+ dbReady=true;
+ dbInitError=null;
+ console.log('Database ready');
 }
+
+dbReadyPromise=init().catch(e=>{dbInitError=e;console.error('Database initialization failed:',e.message);});
+
+app.use('/api',(req,res,next)=>{
+ if(req.path==='/health') return next();
+ if(!dbReady) return res.status(503).json({error:'Database is starting. Please try again in a few seconds.'});
+ next();
+});
+
 function auth(roles=[]){
  return (req,res,next)=>{
    try{
-     const token=(req.headers.authorization||'').replace(/^Bearer\s+/,'');
+     const token=(req.headers.authorization||'').replace(/^Bearer\\s+/,'');
      const user=jwt.verify(token,JWT_SECRET);
      if(roles.length&&!roles.includes(user.role)) return res.status(403).json({error:'Access denied'});
      req.user=user; next();
@@ -45,7 +62,7 @@ function auth(roles=[]){
  };
 }
 function validateFayda(v){return /^[0-9]{16}$/.test(String(v||''));}
-function normalizeGrade(v){return Number(String(v||'').replace(/^Grade\s*/i,''));}
+function normalizeGrade(v){return Number(String(v||'').replace(/^Grade\\s*/i,''));}
 function validSection(v){return ['Section A','Section B','Section C','Section D'].includes(v);}
 function publicStudent(s){
  return {studentId:s.student_id,fullName:s.full_name,firstName:s.first_name,middleName:s.middle_name,lastName:s.last_name,
@@ -56,7 +73,7 @@ function publicStudent(s){
  region:s.guardian_region,city:s.guardian_city,woreda:s.guardian_woreda,subCityOrZone:s.guardian_sub_city_or_zone,
  kebele:s.guardian_kebele,specificAddress:s.guardian_specific_address,photoUrl:s.guardian_photo_url}};
 }
-app.get('/api/health',(req,res)=>res.json({ok:true,school:'Bashasha Secondary School',database:!!process.env.DATABASE_URL}));
+app.get('/api/health',(req,res)=>res.json({ok:true,school:'Bashasha Secondary School',database:dbReady,status:dbReady?'ready':'starting',error:dbReady?null:dbInitError?.message||null}));
 
 app.post('/api/auth/login',async(req,res)=>{
  try{
@@ -178,11 +195,10 @@ app.patch('/api/settings',auth(['admin']),async(req,res)=>{const b=req.body;cons
 app.get('/api/export/students.csv',auth(['admin','teacher']),async(req,res)=>{
  const rows=(await pool.query('select student_id,full_name,gender,dob,fayda_id,phone,country,region,city,woreda,sub_city_or_zone,kebele,specific_address,academic_year,grade,section,study_option,guardian_full_name,guardian_phone,guardian_fayda_id,status from students order by student_id')).rows;
  const cols=Object.keys(rows[0]||{student_id:''});const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';
- const csv=[cols.join(','),...rows.map(r=>cols.map(c=>esc(r[c])).join(','))].join('\n');
+ const csv=[cols.join(','),...rows.map(r=>cols.map(c=>esc(r[c])).join(','))].join('\\n');
  res.setHeader('Content-Type','text/csv');res.setHeader('Content-Disposition','attachment; filename="bashasha-students.csv"');res.send(csv);
 });
 
 app.use((err,req,res,next)=>{console.error(err);res.status(500).json({error:'Internal server error'});});
 app.use(express.static(path.join(__dirname,'..')));
 app.listen(PORT,'0.0.0.0',()=>console.log('Bashasha school online on '+PORT));
-init().catch(e=>console.error('Database initialization failed:',e.message));
