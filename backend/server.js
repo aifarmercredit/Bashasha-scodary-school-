@@ -183,4 +183,6 @@ app.get('/api/export/students.csv',auth(['admin','teacher']),async(req,res)=>{
 });
 
 app.use((err,req,res,next)=>{console.error(err);res.status(500).json({error:'Internal server error'});});
-app.listen(PORT,'0.0.0.0',()=>{console.log('Bashasha backend listening on '+PORT); retryDb().catch(()=>{});});
+app.use(express.static(path.join(__dirname,'..')));
+app.get('*',(req,res,next)=>{ if(req.path.startsWith('/api/')) return next(); res.sendFile(path.join(__dirname,'..','index.html')); });
+init().then(()=>app.listen(PORT,'0.0.0.0',()=>console.log('Bashasha school online on '+PORT))).catch(e=>{console.error(e);process.exit(1)});
