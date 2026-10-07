@@ -20,3 +20,9 @@ services:
         value: bashashascodaryschool@gmail.com
       - key: ADMIN_PASSWORD
         sync: false
+
+databases:
+  - name: bashasha-school-db
+    postgresMajorVersion: "18"
+    plan: free
+    region: frankfurt
