@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: bashasha-school-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    repo: https://github.com/aifarmercredit/Bashasha-scodary-school-
+    branch: main
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bashasha-school-db
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        value: bashashascodaryschool@gmail.com
+      - key: ADMIN_PASSWORD
+        sync: false
